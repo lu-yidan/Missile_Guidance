@@ -19,8 +19,10 @@ class SimConfig:
     dt: float = 0.05                    # 时间步长 (s)
     max_time: float = 15.0              # 最大仿真时间 (s)
     hit_threshold: float = 5.0          # 命中判定距离 (m)
-    interceptor_speed: float = 250.0    # 拦截器速度 (m/s)
-    target_speed: float = 100.0         # 目标速度 (m/s)
+    interceptor_speed: float = 50.0     # 拦截器速度 (m/s)
+    target_speed: float = 150.0         # 目标速度 (m/s)
+    continue_after_miss: bool = True    # 脱靶后继续仿真
+    post_miss_time: float = 3.0         # 脱靶后继续仿真时间 (s)
 
 
 @dataclass
@@ -80,7 +82,10 @@ class Simulator:
 
         time = 0.0
         hit = False
+        miss_detected = False
+        miss_time = 0.0
         min_distance = float('inf')
+        prev_distance = float('inf')
 
         while time < self.config.max_time:
             # 计算距离
@@ -92,13 +97,30 @@ class Simulator:
                 hit = True
                 break
 
+            # 检测脱靶（距离开始增大）
+            if not miss_detected and distance > prev_distance and distance > 20:
+                miss_detected = True
+                miss_time = time
+
+            # 脱靶后继续仿真一段时间
+            if miss_detected and self.config.continue_after_miss:
+                if time - miss_time > self.config.post_miss_time:
+                    break
+            elif miss_detected:
+                break
+
+            prev_distance = distance
+
             # 目标机动加速度
             target_accel = maneuver.get_acceleration(target, interceptor)
 
-            # 制导加速度
-            interceptor_accel = guidance.compute(
-                target, interceptor, self.config.interceptor_speed
-            )
+            # 制导加速度（脱靶后停止制导，保持惯性飞行）
+            if not miss_detected:
+                interceptor_accel = guidance.compute(
+                    target, interceptor, self.config.interceptor_speed
+                )
+            else:
+                interceptor_accel = np.array([0.0, 0.0])
 
             # 更新目标状态
             target.vel += target_accel * self.config.dt
@@ -121,13 +143,6 @@ class Simulator:
             interceptor_traj.append(interceptor.pos.copy())
             time += self.config.dt
             times.append(time)
-
-            # 检查是否已经飞过
-            rel_vel = target.vel - interceptor.vel
-            rel_pos = target.pos - interceptor.pos
-            if np.dot(rel_pos, rel_vel) > 0 and distance > 50:
-                # 拦截器已经飞过目标
-                break
 
         return SimResult(
             target_trajectory=np.array(target_traj),

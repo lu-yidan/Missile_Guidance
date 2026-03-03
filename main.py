@@ -31,11 +31,11 @@ def get_default_scenario():
     """获取默认场景"""
     target = State(
         pos=np.array([0.0, 500.0]),
-        vel=np.array([80.0, -10.0])
+        vel=np.array([15.0, -100.0])
     )
     interceptor = State(
         pos=np.array([200.0, 0.0]),
-        vel=np.array([0.0, 80.0])
+        vel=np.array([-0.0, 0.0])
     )
     return target, interceptor
 

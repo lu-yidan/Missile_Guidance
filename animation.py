@@ -39,9 +39,10 @@ METHOD_COLORS = {
 
 def create_single_animation(result: SimResult,
                            output_path: str = 'output/intercept.gif',
-                           fps: int = 20,
+                           fps: int = 15,
                            show_los: bool = True,
-                           show_trail: bool = True) -> str:
+                           show_trail: bool = True,
+                           playback_speed: float = 1.0) -> str:
     """
     创建单个拦截动画
 
@@ -51,6 +52,7 @@ def create_single_animation(result: SimResult,
         fps: 帧率
         show_los: 显示视线
         show_trail: 显示轨迹
+        playback_speed: 播放速度 (0.5=慢放2倍, 1.0=正常, 2.0=快放2倍)
 
     Returns:
         输出文件路径
@@ -147,12 +149,15 @@ def create_single_animation(result: SimResult,
 
         return list(elements.values()) + [info_text]
 
+    # playback_speed < 1.0 = 慢放, > 1.0 = 快放
+    interval = int(1000 / fps / playback_speed)
+
     anim = animation.FuncAnimation(
         fig, animate, init_func=init,
-        frames=n_frames, interval=1000//fps, blit=True
+        frames=n_frames, interval=interval, blit=True
     )
 
-    print(f"Generating animation: {output_path}")
+    print(f"Generating animation: {output_path} (speed={playback_speed}x)")
     anim.save(output_path, writer='pillow', fps=fps)
     plt.close()
 
