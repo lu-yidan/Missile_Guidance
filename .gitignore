@@ -38,7 +38,7 @@ env/
 
 # Output files
 output/
-*.gif
+# *.gif
 *.png
 *.mp4
 
